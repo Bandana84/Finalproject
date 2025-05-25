@@ -1,0 +1,75 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Carts - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between animate-slide-up">
+        <h1 class="text-2xl font-bold text-gray-800">Shopping Carts</h1>
+        <a href="{% url 'admin_dashboard' %}" class="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Active Shopping Carts</h2>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                            <th class="pb-3">Cart ID</th>
+                            <th class="pb-3">User</th>
+                            <th class="pb-3">Items</th>
+                            <th class="pb-3">Total</th>
+                            <th class="pb-3">Created</th>
+                            <th class="pb-3">Last Updated</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for cart in carts %}
+                        <tr class="text-sm hover:bg-gray-50 transition-colors duration-200">
+                            <td class="py-4 font-medium">#{{ cart.id }}</td>
+                            <td class="py-4">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                                        <i class="fas fa-user text-gray-500"></i>
+                                    </div>
+                                    {{ cart.user.username }}
+                                </div>
+                            </td>
+                            <td class="py-4">{{ cart.items.count }} items</td>
+                            <td class="py-4 font-medium">${{ cart.total_amount }}</td>
+                            <td class="py-4 text-gray-500">{{ cart.created_at|date:"M d, Y" }}</td>
+                            <td class="py-4 text-gray-500">{{ cart.updated_at|date:"M d, Y" }}</td>
+                            <td class="py-4">
+                                <div class="flex items-center space-x-2">
+                                    <a href="{% url 'admin_cart_detail' cart.id %}" class="text-primary-600 hover:text-primary-700 transition-colors duration-200" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-8 text-center">
+                                <div class="flex flex-col items-center">
+                                    <div class="p-3 bg-gray-100 rounded-full mb-3">
+                                        <i class="fas fa-shopping-cart text-gray-400 text-2xl"></i>
+                                    </div>
+                                    <p class="text-gray-500">No active shopping carts</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

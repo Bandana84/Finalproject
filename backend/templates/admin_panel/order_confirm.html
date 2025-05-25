@@ -1,0 +1,112 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Confirm Order - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between animate-slide-up">
+        <h1 class="text-2xl font-bold text-gray-800">Confirm Order</h1>
+        <a href="{% url 'admin_orders' %}" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
+            <i class="fas fa-times"></i>
+        </a>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-scale-in" style="animation-delay: 0.1s;">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Order Summary</h2>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                <!-- Customer Information -->
+                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                    <div class="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-primary-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">{{ order.user.username }}</p>
+                        <p class="text-sm text-gray-500">{{ order.user.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Shipping Information -->
+                <div class="p-4 bg-gray-50 rounded-lg space-y-3">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-map-marker-alt text-gray-400"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">Shipping Address</p>
+                            <p class="font-medium text-gray-900">{{ order.shipping_address }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-phone text-gray-400"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">Phone Number</p>
+                            <p class="font-medium text-gray-900">{{ order.phone_number }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-medium text-gray-600">Order Items</h3>
+                    <div class="divide-y divide-gray-100">
+                        {% for item in order.items.all %}
+                        <div class="py-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                {% if item.product.image %}
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-12 h-12 rounded-lg object-cover">
+                                {% else %}
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-image text-gray-400"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ item.product.name }}</p>
+                                    <p class="text-sm text-gray-500">Qty: {{ item.quantity }}</p>
+                                </div>
+                            </div>
+                            <p class="font-medium text-gray-900">${{ item.total_price }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Order Total -->
+                <div class="pt-4 border-t border-gray-100 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal</span>
+                        <span class="font-medium">${{ order.total_amount }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Shipping</span>
+                        <span class="font-medium">${{ order.shipping_cost }}</span>
+                    </div>
+                    <div class="flex justify-between text-lg pt-2 border-t border-gray-100">
+                        <span class="font-semibold text-gray-900">Total</span>
+                        <span class="font-bold text-primary-600">${{ order.total_amount|add:order.shipping_cost }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Actions -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.2s;">
+        <div class="p-6">
+            <div class="flex flex-wrap gap-4">
+                <button onclick="window.history.back()" class="btn-hover px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+                <form method="post" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-hover w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200">
+                        <i class="fas fa-check mr-2"></i>Confirm Order
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

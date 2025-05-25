@@ -1,0 +1,221 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Order #{{ order.id }} - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between animate-slide-up">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'admin_orders' %}" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="text-2xl font-bold text-gray-800">Order #{{ order.id }}</h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="px-3 py-1 rounded-full text-sm font-medium
+                {% if order.status == 'Pending' %}bg-yellow-100 text-yellow-800
+                {% elif order.status == 'Processing' %}bg-blue-100 text-blue-800
+                {% elif order.status == 'Delivered' %}bg-green-100 text-green-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ order.status }}
+            </span>
+            <form method="post" action="{% url 'admin_order_update_status' order.id %}" class="flex items-center space-x-2">
+                {% csrf_token %}
+                <select name="status" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                    <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+                <button type="submit" class="btn-hover px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200">
+                    <i class="fas fa-save mr-2"></i>Update Status
+                </button>
+            </form>
+            <button onclick="printOrder()" class="btn-hover px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                <i class="fas fa-print mr-2"></i>Print
+            </button>
+            <a href="{% url 'admin_order_delete' order.id %}" class="btn-hover px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200">
+                <i class="fas fa-trash mr-2"></i>Delete Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Order Information -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Customer Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-scale-in" style="animation-delay: 0.1s;">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Customer Information</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-500"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">{{ order.user.username }}</p>
+                        <p class="text-sm text-gray-500">{{ order.user.email }}</p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-100">
+                    <p class="text-sm text-gray-600">Order Date</p>
+                    <p class="font-medium text-gray-900">{{ order.created_at|date:"F d, Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shipping Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-scale-in" style="animation-delay: 0.2s;">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Shipping Information</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                {% if order.address %}
+                <div>
+                    <p class="text-sm text-gray-600">Street</p>
+                    <p class="font-medium text-gray-900">{{ order.address.street }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">City</p>
+                    <p class="font-medium text-gray-900">{{ order.address.city }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Province</p>
+                    <p class="font-medium text-gray-900">{{ order.address.province }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Country</p>
+                    <p class="font-medium text-gray-900">{{ order.address.country }}</p>
+                </div>
+                {% if order.address.phone %}
+                <div>
+                    <p class="text-sm text-gray-600">Phone</p>
+                    <p class="font-medium text-gray-900">{{ order.address.phone }}</p>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-gray-500">No shipping address provided</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-scale-in" style="animation-delay: 0.3s;">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Order Summary</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Subtotal</span>
+                    <span class="font-medium">${{ order.total_amount }}</span>
+                </div>
+                {% if order.shipping_cost %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Shipping</span>
+                    <span class="font-medium">${{ order.shipping_cost }}</span>
+                </div>
+                {% endif %}
+                <div class="pt-4 border-t border-gray-100">
+                    <div class="flex justify-between">
+                        <span class="text-lg font-semibold text-gray-900">Total</span>
+                        <span class="text-lg font-bold text-primary-600">
+                            ${{ order.total_amount }}
+                            {% if order.shipping_cost %}
+                            + ${{ order.shipping_cost }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.4s;">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Order Items</h2>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                            <th class="pb-3">Product</th>
+                            <th class="pb-3">Price</th>
+                            <th class="pb-3">Quantity</th>
+                            <th class="pb-3 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for item in order.items.all %}
+                        <tr class="text-sm hover:bg-gray-50 transition-colors duration-200">
+                            <td class="py-4">
+                                <div class="flex items-center space-x-3">
+                                    {% with first_image=item.product.images.first %}
+                                    {% if first_image %}
+                                    <img src="{{ first_image.image.url }}" alt="{{ item.product.name }}" class="w-12 h-12 rounded-lg object-cover">
+                                    {% else %}
+                                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-image text-gray-400"></i>
+                                    </div>
+                                    {% endif %}
+                                    {% endwith %}
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ item.product.name }}</p>
+                                        <p class="text-gray-500">{{ item.product.category.name }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4">${{ item.price }}</td>
+                            <td class="py-4">{{ item.quantity }}</td>
+                            <td class="py-4 text-right font-medium">${{ item.total_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Actions -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.5s;">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Order Actions</h2>
+        </div>
+        <div class="p-6">
+            <form method="post" action="{% url 'admin_order_update_status' order.id %}" class="flex flex-wrap gap-4">
+                {% csrf_token %}
+                <select name="status" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                    <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+                <button type="submit" class="btn-hover px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200">
+                    <i class="fas fa-save mr-2"></i>Update Status
+                </button>
+            </form>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mt-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+                        <i class="fas fa-info-circle mr-2"></i>{{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function printOrder() {
+    window.print();
+}
+
+function updateOrderStatus() {
+    const status = document.getElementById('orderStatus').value;
+    // Add your status update logic here
+    console.log('Updating order status to:', status);
+}
+</script>
+{% endblock %} 

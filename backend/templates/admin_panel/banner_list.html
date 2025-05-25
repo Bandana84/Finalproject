@@ -1,0 +1,63 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Banners - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between animate-slide-up">
+        <h1 class="text-2xl font-bold text-gray-800">Banners</h1>
+        <a href="{% url 'admin_dashboard' %}" class="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-800">Active Banners</h2>
+            <a href="{% url 'admin_banner_add' %}" class="text-sm text-primary-600 hover:text-primary-700 transition-colors duration-200 flex items-center">
+                Add New Banner <i class="fas fa-plus ml-1"></i>
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for banner in banners %}
+                <div class="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                    <div class="aspect-w-16 aspect-h-9">
+                        <img src="{{ banner.image.url }}" alt="{{ banner.title }}" class="object-cover w-full h-full">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium text-gray-800">{{ banner.title }}</h3>
+                        <p class="text-sm text-gray-500 mt-1">{{ banner.subtitle }}</p>
+                        <div class="mt-4 flex items-center justify-between">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium {% if banner.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ banner.is_active|yesno:"Active,Inactive" }}
+                            </span>
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'admin_banner_edit' banner.id %}" class="text-primary-600 hover:text-primary-700 transition-colors duration-200">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'admin_banner_delete' banner.id %}" class="text-red-600 hover:text-red-700 transition-colors duration-200" onclick="return confirm('Are you sure you want to delete this banner?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full py-8 text-center">
+                    <div class="flex flex-col items-center">
+                        <div class="p-3 bg-gray-100 rounded-full mb-3">
+                            <i class="fas fa-image text-gray-400 text-2xl"></i>
+                        </div>
+                        <p class="text-gray-500">No banners found</p>
+                        <a href="{% url 'admin_banner_add' %}" class="mt-4 text-primary-600 hover:text-primary-700 transition-colors duration-200">
+                            Add your first banner
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

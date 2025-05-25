@@ -1,0 +1,197 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}{% if product %}Edit{% else %}Add{% endif %} Product - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between animate-slide-up">
+        <h1 class="text-2xl font-bold text-gray-800">
+            {% if product %}Edit{% else %}Add{% endif %} Product
+        </h1>
+        <a href="{% url 'admin_products' %}" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
+            <i class="fas fa-times"></i>
+        </a>
+    </div>
+
+    <!-- Product Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-scale-in" style="animation-delay: 0.1s;">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Basic Information</h2>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label for="name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                        <input type="text" name="name" id="name" value="{{ product.name|default:'' }}" required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <select name="category" id="category" required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if product.category == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" id="description" rows="4" required
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">{{ product.description|default:'' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Pricing and Stock -->
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Pricing and Stock</h2>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-2">
+                        <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                            <input type="number" name="price" id="price" step="0.01" min="0" value="{{ product.price|default:'' }}" required
+                                class="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="offer_price" class="block text-sm font-medium text-gray-700">Offer Price</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                            <input type="number" name="offer_price" id="offer_price" step="0.01" min="0" value="{{ product.offer_price|default:'' }}"
+                                class="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="in_stock" class="block text-sm font-medium text-gray-700">Stock Status</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="in_stock" id="in_stock" {% if product.in_stock %}checked{% endif %}
+                                class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                            <label for="in_stock" class="ml-2 text-sm text-gray-700">In Stock</label>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="unit" class="block text-sm font-medium text-gray-700">Unit</label>
+                        <select name="unit" id="unit" required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-colors duration-200">
+                            <option value="kg" {% if product.unit == 'kg' %}selected{% endif %}>Kilogram (kg)</option>
+                            <option value="g" {% if product.unit == 'g' %}selected{% endif %}>Gram (g)</option>
+                            <option value="lb" {% if product.unit == 'lb' %}selected{% endif %}>Pound (lb)</option>
+                            <option value="oz" {% if product.unit == 'oz' %}selected{% endif %}>Ounce (oz)</option>
+                            <option value="piece" {% if product.unit == 'piece' %}selected{% endif %}>Piece</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Images -->
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Product Images</h2>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="space-y-4">
+                    <!-- Existing Images -->
+                    {% if product.images.all %}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {% for image in product.images.all %}
+                            <div class="relative">
+                                <img src="{{ image.image.url }}" alt="Product Image" class="w-full h-32 rounded-lg object-cover">
+                                <button type="button" class="absolute top-2 right-2 text-red-500 hover:text-red-700" onclick="removeImage(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- New Images Upload -->
+                    <div class="flex items-center gap-4">
+                        <input type="file" name="images" id="images" multiple accept="image/*" class="hidden" onchange="previewImages(this)">
+                        <label for="images" class="btn-hover px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200">
+                            <i class="fas fa-upload mr-2"></i>Upload Images
+                        </label>
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" name="clear_images" id="clear_images" class="mr-2">
+                            Clear existing images
+                        </label>
+                    </div>
+
+                    <!-- Image Preview -->
+                    <div id="image-preview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="p-6 border-t border-gray-100">
+                <div class="flex flex-wrap gap-4">
+                    <a href="{% url 'admin_products' %}" class="btn-hover px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn-hover px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200">
+                        <i class="fas fa-save mr-2"></i>Save Product
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Preview images before upload
+function previewImages(input) {
+    const previewContainer = document.getElementById('image-preview');
+    previewContainer.innerHTML = ''; // Clear existing previews
+    
+    const files = input.files;
+    if (files.length > 4) {
+        alert('You can only upload up to 4 images');
+        input.value = ''; // Clear the input
+        return;
+    }
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.createElement('div');
+                preview.className = 'relative';
+                preview.innerHTML = `
+                    <img src="${e.target.result}" class="w-full h-32 rounded-lg object-cover">
+                    <button type="button" class="absolute top-2 right-2 text-red-500 hover:text-red-700" onclick="removePreview(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                previewContainer.appendChild(preview);
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+}
+
+function removePreview(button) {
+    const preview = button.parentElement;
+    preview.remove();
+    
+    // Clear the file input
+    const input = document.getElementById('images');
+    input.value = '';
+}
+
+function removeImage(button) {
+    const imageContainer = button.closest('.relative');
+    imageContainer.remove();
+}
+</script>
+{% endblock %}

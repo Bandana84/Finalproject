@@ -1,0 +1,185 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Dashboard - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between animate-slide-up">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <div class="text-sm text-gray-500 flex items-center">
+            <i class="far fa-calendar-alt mr-2"></i>
+            {{ now|date:"F d, Y" }}
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <!-- Total Products -->
+        <a href="{% url 'admin_products' %}" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 card-hover animate-scale-in transform hover:scale-105 transition-all duration-300" style="animation-delay: 0.1s;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Products</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ product_count }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Available items</p>
+                </div>
+                <div class="p-3 bg-primary-50 rounded-lg transform hover:scale-110 transition-transform duration-300">
+                    <i class="fas fa-box text-primary-600 text-xl"></i>
+                </div>
+            </div>
+        </a>
+
+        <!-- Active Orders -->
+        <a href="{% url 'admin_orders' %}?status=Processing" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 card-hover animate-scale-in transform hover:scale-105 transition-all duration-300" style="animation-delay: 0.2s;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Orders</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ active_orders_count }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Orders in progress</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-lg transform hover:scale-110 transition-transform duration-300">
+                    <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </a>
+
+        <!-- Total Users -->
+        <a href="{% url 'admin_users' %}" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 card-hover animate-scale-in transform hover:scale-105 transition-all duration-300" style="animation-delay: 0.3s;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Users</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ user_count }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Registered customers</p>
+                </div>
+                <div class="p-3 bg-purple-50 rounded-lg transform hover:scale-110 transition-transform duration-300">
+                    <i class="fas fa-users text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </a>
+
+        <!-- Active Banners -->
+        <a href="{% url 'admin_banners' %}" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 card-hover animate-scale-in transform hover:scale-105 transition-all duration-300" style="animation-delay: 0.4s;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Banners</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ active_banners_count }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Current promotions</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded-lg transform hover:scale-110 transition-transform duration-300">
+                    <i class="fas fa-image text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </a>
+
+        <!-- Active Carts -->
+        <a href="{% url 'admin_carts' %}" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 card-hover animate-scale-in transform hover:scale-105 transition-all duration-300" style="animation-delay: 0.5s;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Carts</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ active_carts_count }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Shopping carts</p>
+                </div>
+                <div class="p-3 bg-orange-50 rounded-lg transform hover:scale-110 transition-transform duration-300">
+                    <i class="fas fa-shopping-basket text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.6s;">
+        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-800">Recent Orders</h2>
+            <a href="{% url 'admin_orders' %}" class="text-sm text-primary-600 hover:text-primary-700 transition-colors duration-200 flex items-center">
+                View all orders <i class="fas fa-arrow-right ml-1 transform hover:translate-x-1 transition-transform duration-200"></i>
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                            <th class="pb-3">Order ID</th>
+                            <th class="pb-3">User</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3">Total</th>
+                            <th class="pb-3">Date</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for order in recent_orders %}
+                        <tr class="text-sm hover:bg-gray-50 transition-colors duration-200">
+                            <td class="py-4 font-medium">#{{ order.id }}</td>
+                            <td class="py-4">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                                        <i class="fas fa-user text-gray-500"></i>
+                                    </div>
+                                    {{ order.user.username }}
+                                </div>
+                            </td>
+                            <td class="py-4">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium
+                                    {% if order.status == 'Pending' %}bg-yellow-100 text-yellow-800
+                                    {% elif order.status == 'Processing' %}bg-blue-100 text-blue-800
+                                    {% elif order.status == 'Delivered' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td class="py-4 font-medium">${{ order.total_amount }}</td>
+                            <td class="py-4 text-gray-500">{{ order.created_at|date:"M d, Y" }}</td>
+                            <td class="py-4">
+                                <a href="{% url 'admin_order_detail' order.id %}" class="text-primary-600 hover:text-primary-700 transition-colors duration-200">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-8 text-center">
+                                <div class="flex flex-col items-center">
+                                    <div class="p-3 bg-gray-100 rounded-full mb-3">
+                                        <i class="fas fa-shopping-cart text-gray-400 text-2xl"></i>
+                                    </div>
+                                    <p class="text-gray-500">No recent orders</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover animate-slide-up" style="animation-delay: 0.7s;">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Quick Actions</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="{% url 'admin_products' %}" class="group flex items-center justify-center gap-3 px-4 py-4 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-all duration-300 transform hover:scale-105">
+                    <div class="p-2 bg-primary-100 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-box text-xl"></i>
+                    </div>
+                    <span class="font-medium">Manage Products</span>
+                </a>
+                <a href="{% url 'admin_orders' %}" class="group flex items-center justify-center gap-3 px-4 py-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                    <div class="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-shopping-cart text-xl"></i>
+                    </div>
+                    <span class="font-medium">View Orders</span>
+                </a>
+                <a href="{% url 'admin_users' %}" class="group flex items-center justify-center gap-3 px-4 py-4 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-all duration-300 transform hover:scale-105">
+                    <div class="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                    <span class="font-medium">Manage Users</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,113 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Contact Submissions - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-800">Contact Submissions</h1>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="flex">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" id="contactSearchInput" placeholder="Search contacts..." 
+                       class="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Submissions Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                        <th class="px-6 py-4">Name</th>
+                        <th class="px-6 py-4">Email</th>
+                        <th class="px-6 py-4">Subject</th>
+                        <th class="px-6 py-4">Message</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for submission in contact_submissions %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200">
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">{{ submission.name }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="mailto:{{ submission.email }}" class="text-primary-600 hover:text-primary-700">{{ submission.email }}</a>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ submission.subject|default:"No Subject" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ submission.message|truncatewords:20 }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 text-sm rounded-full {% if submission.is_processed %}bg-green-50 text-green-700{% else %}bg-yellow-50 text-yellow-700{% endif %}">
+                                {% if submission.is_processed %}Processed{% else %}Unprocessed{% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end space-x-3">
+                                <form method="post" class="inline" onsubmit="return confirm('Are you sure you want to change the status?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="submission_id" value="{{ submission.id }}">
+                                    <button type="submit" class="text-primary-600 hover:text-primary-700">
+                                        <i class="fas {% if submission.is_processed %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="p-3 bg-gray-100 rounded-full mb-3">
+                                    <i class="fas fa-envelope text-gray-400 text-2xl"></i>
+                                </div>
+                                <p class="text-gray-500">No contact submissions found</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('contactSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const subject = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                const message = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || email.includes(searchTerm) || 
+                    subject.includes(searchTerm) || message.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

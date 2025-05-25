@@ -1,0 +1,172 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Users - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-800">Users</h1>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <form id="searchForm" class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" placeholder="Search users..." class="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" id="searchInput" name="search">
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <select class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" id="roleFilter" name="role">
+                    <option value="">All Roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="user">User</option>
+                </select>
+                <select class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" id="statusFilter" name="status">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                        <th class="px-6 py-4">User</th>
+                        <th class="px-6 py-4">Email</th>
+                        <th class="px-6 py-4">Role</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Joined</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for user in users %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900">{{ user.username }}</div>
+                                    <div class="text-sm text-gray-500">ID: #{{ user.id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ user.email }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 text-sm rounded-full {% if user.is_staff %}bg-purple-50 text-purple-700{% else %}bg-blue-50 text-blue-700{% endif %}">
+                                {{ user.is_staff|yesno:"Admin,User" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 text-sm rounded-full {% if user.is_active %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+                                {{ user.is_active|yesno:"Active,Inactive" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ user.date_joined|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ user.date_joined|date:"h:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end space-x-3">
+                                <a href="{% url 'admin_user_edit' user.id %}" class="text-primary-600 hover:text-primary-700">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'admin_user_delete' user.id %}" class="text-red-600 hover:text-red-700">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                <button onclick="toggleUserStatus({{ user.id }})" class="{% if user.is_active %}text-green-600 hover:text-green-700{% else %}text-red-600 hover:text-red-700{% endif %}">
+                                    <i class="fas {% if user.is_active %}fa-user-check{% else %}fa-user-slash{% endif %}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="p-3 bg-gray-100 rounded-full mb-3">
+                                    <i class="fas fa-users text-gray-400 text-2xl"></i>
+                                </div>
+                                <p class="text-gray-500">No users found</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get form elements
+const searchForm = document.querySelector('#searchForm');
+const searchInput = document.querySelector('#searchInput');
+const roleFilter = document.querySelector('#roleFilter');
+const statusFilter = document.querySelector('#statusFilter');
+
+// Set initial filter values from URL
+const urlParams = new URLSearchParams(window.location.search);
+searchInput.value = urlParams.get('search') || '';
+roleFilter.value = urlParams.get('role') || '';
+statusFilter.value = urlParams.get('status') || '';
+
+// Handle form submission
+searchForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const searchQuery = searchInput.value.trim();
+    const role = roleFilter.value;
+    const status = statusFilter.value;
+    
+    const url = new URL(window.location.href);
+    url.searchParams.set('search', searchQuery);
+    if (role !== '') url.searchParams.set('role', role);
+    if (status !== '') url.searchParams.set('status', status);
+    
+    window.location.href = url.toString();
+});
+
+// Function to toggle user status
+async function toggleUserStatus(userId) {
+    const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+    const statusButton = userRow.querySelector('.fas');
+    
+    try {
+        const response = await fetch(`/admin/users/${userId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        if (!response.ok) throw new Error('Failed to toggle status');
+        
+        const data = await response.json();
+        
+        // Update UI
+        statusButton.className = data.is_active ? 'fas fa-user-check text-green-600' : 'fas fa-user-slash text-red-600';
+        
+        // Show success message
+        alert('User status updated successfully!');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update user status');
+    }
+}
+</script>
+{% endblock %}

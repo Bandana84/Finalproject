@@ -1,0 +1,73 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Delete Order - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'admin_orders' %}" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="text-xl font-bold text-gray-800">Delete Order</h1>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 card-hover">
+        <div class="p-6">
+            <!-- Warning Alert -->
+            <div class="mb-6 p-4 rounded-lg bg-red-50 border-l-4 border-red-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-red-800 font-medium">Warning!</h3>
+                        <p class="text-red-700">Are you sure you want to delete Order #{{ order.id }}? This action cannot be undone.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Details -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Order Details:</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <span class="font-medium text-gray-500 w-32">Customer:</span>
+                        <span class="text-gray-900">{{ order.user.username }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="font-medium text-gray-500 w-32">Total Amount:</span>
+                        <span class="text-gray-900">${{ order.total_amount }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="font-medium text-gray-500 w-32">Status:</span>
+                        <span class="text-gray-900">{{ order.status|title }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="font-medium text-gray-500 w-32">Date:</span>
+                        <span class="text-gray-900">{{ order.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-end space-x-3">
+                    <a href="{% url 'admin_orders' %}" 
+                       class="btn-hover px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" 
+                            class="btn-hover px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200">
+                        <i class="fas fa-trash mr-2"></i>Delete Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Orders - Farm Market Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-800">Orders</h1>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <form id="orderSearchForm" class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" placeholder="Search orders..." class="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" id="orderSearchInput" name="search">
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <select class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" id="statusFilter" name="status">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+               
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-sm font-medium text-gray-500 border-b border-gray-100">
+                        <th class="px-6 py-4">Order ID</th>
+                        <th class="px-6 py-4">Customer</th>
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Total</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for order in orders %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200" data-order-id="{{ order.id }}">
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">#{{ order.id }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900">{{ order.user.username }}</div>
+                                    <div class="text-sm text-gray-500">{{ order.user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ order.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ order.created_at|date:"h:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">${{ order.total_amount }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 text-sm rounded-full
+                                {% if order.status == 'Pending' %}bg-yellow-50 text-yellow-700
+                                {% elif order.status == 'Processing' %}bg-blue-50 text-blue-700
+                                {% elif order.status == 'Delivered' %}bg-green-50 text-green-700
+                                {% else %}bg-red-50 text-red-700{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end space-x-3">
+                                <a href="{% url 'admin_order_detail' order.id %}" class="text-primary-600 hover:text-primary-700">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="p-3 bg-gray-100 rounded-full mb-3">
+                                    <i class="fas fa-shopping-cart text-gray-400 text-2xl"></i>
+                                </div>
+                                <p class="text-gray-500">No orders found</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get form elements
+const orderSearchForm = document.querySelector('#orderSearchForm');
+const orderSearchInput = document.querySelector('#orderSearchInput');
+const statusFilter = document.querySelector('#statusFilter');
+const timeFilter = document.querySelector('#timeFilter');
+
+// Set initial filter values from URL
+const urlParams = new URLSearchParams(window.location.search);
+orderSearchInput.value = urlParams.get('search') || '';
+statusFilter.value = urlParams.get('status') || '';
+timeFilter.value = urlParams.get('time') || '';
+
+// Handle form submission
+orderSearchForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const searchQuery = orderSearchInput.value.trim();
+    const status = statusFilter.value;
+    const time = timeFilter.value;
+    
+    const url = new URL(window.location.href);
+    url.searchParams.set('search', searchQuery);
+    if (status !== '') url.searchParams.set('status', status);
+    if (time !== '') url.searchParams.set('time', time);
+    
+    window.location.href = url.toString();
+});
+
+// Function to update order status
+async function updateStatus(orderId) {
+    const orderRow = document.querySelector(`tr[data-order-id="${orderId}"]`);
+    const statusSpan = orderRow.querySelector('.order-status');
+    
+    try {
+        const response = await fetch(`/admin/orders/${orderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        if (!response.ok) throw new Error('Failed to update status');
+        
+        const data = await response.json();
+        
+        // Update UI
+        statusSpan.className = `px-3 py-1 text-sm rounded-full ${
+            data.status === 'Pending' ? 'bg-yellow-50 text-yellow-700' :
+            data.status === 'Processing' ? 'bg-blue-50 text-blue-700' :
+            data.status === 'Delivered' ? 'bg-green-50 text-green-700' :
+            'bg-red-50 text-red-700'
+        }`;
+        statusSpan.textContent = data.status;
+        
+        // Show success message
+        alert('Order status updated successfully!');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update order status');
+    }
+}
+</script>
+{% endblock %}
