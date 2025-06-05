@@ -58,50 +58,55 @@ const Login = () => {
           password2: confirmPassword,
         });
 
-        setSuccessMessage("Registration successful! Please verify your email with otp");
-         setPassword("");
+        setSuccessMessage("Registration successful! Check your email for the OTP code.");
+        setPassword("");
         setConfirmPassword("");
 
         // Redirect to verify-email page
-        setTimeout(() => navigate(`/verify-email/${name}`), 300);
+        setTimeout(() => {
+          navigate(`/verify-email/${name}`);
+        }, 300);
         
       } catch (err) {
         setError(err.response?.data?.detail || "Registration failed.");
       }
     } else {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/users/login/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
+        const response = await axios.post('http://127.0.0.1:8000/api/users/login/', {
+          email: email,
+          password: password,
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || 'Login failed');
-        }
-
-        const { tokens, ...userInfo } = data;
+        const data = response.data;
+        console.log('Login response:', data);
         
         // Store user data and tokens
-        localStorage.setItem('user', JSON.stringify(userInfo));
-        localStorage.setItem('tokens', JSON.stringify(tokens));
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('tokens', JSON.stringify(data.tokens));
         
         setUser({
-          ...userInfo,
-          tokens: tokens
+          ...data.user,
+          tokens: data.tokens
         });
-        navigate('/')
+        navigate('/');
         setShowUserLogin(false);
         setIsLoggedIn(true);
+        
       } catch (err) {
-        setError(err.message || "Login failed. Check your credentials.");
+        console.error('Login error:', err.response?.data || err.message);
+        
+        // Handle different types of errors
+        if (err.response?.data?.non_field_errors) {
+          setError('Please verify your email address first.');
+        } else if (err.response?.data?.detail) {
+          setError(err.response.data.detail);
+        } else if (err.response?.data?.email) {
+          setError(err.response.data.email);
+        } else if (err.response?.data?.password) {
+          setError(err.response.data.password);
+        } else {
+          setError('Login failed. Please check your credentials.');
+        }
       }
     }
   };

@@ -67,9 +67,14 @@ const Cart = () => {
                             onClick={() => navigate(`/products/${item.category}/${item.id}`)}
                         />
                         <div className="item-details">
-                            <h3 onClick={() => navigate(`/products/${item.category}/${item.id}`)}>
-                                {item.name}
-                            </h3>
+                            <div className="product-info">
+                                <h3 onClick={() => navigate(`/products/${item.category}/${item.id}`)}>
+                                    {item.name}
+                                </h3>
+                                <span className={`stock-status ${item.inStock ? 'in-stock' : 'out-of-stock'}`}>
+                                    {item.inStock ? 'In Stock' : 'Out of Stock'}
+                                </span>
+                            </div>
                             <p>Price: {currency}{item.offer_price}</p>
                             <div className="quantity-controls">
                                 <button 

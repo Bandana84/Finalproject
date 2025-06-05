@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'carts',
     'admin_panel',
     'contacts',
-    'payment'
+ 
 ]
 
 MIDDLEWARE = [
@@ -82,6 +82,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'custom_filters': 'admin_panel.templatetags.custom_filters',
+            }
         },
     },
 ]
@@ -211,10 +214,13 @@ ADMIN_SITE_TITLE = "Farm Market Admin Portal"
 ADMIN_INDEX_TITLE = "Welcome to Farm Market Admin Portal"
 
 
-# Add to your settings.py
-# Add these to your settings
-KHALTI_SECRET_KEY = 'd1790b84c696446db29feb56628ec289'  # Your live secret key
-KHALTI_PUBLIC_KEY = '1d0d8975e8e94a6e891330239cc8d1b8'  # Your live public key
-FRONTEND_URL = 'http://localhost:3000'  # Your React app URL
 # settings.py
-BASE_URL = 'http://localhost:8000'  # Or your production domain
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+# # Khalti Configuration
+# KHALTI_SECRET_KEY = os.getenv('KHALTI_SECRET_KEY', 'test_secret_d1790b84c696446db29feb56628ec289')
+# KHALTI_PUBLIC_KEY = os.getenv('KHALTI_PUBLIC_KEY', 'test_public_1d0d8975e8e94a6e891330239cc8d1b8')
+KHALTI_SECRET_KEY = 'd1790b84c696446db29feb56628ec289'
+FRONTEND_URL = 'http://localhost:5173/'  # Or localhost for development

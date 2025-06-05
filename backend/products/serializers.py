@@ -50,3 +50,4 @@ class ReviewSerializer(serializers.ModelSerializer):
             'id': obj.user.id,
             'username': obj.user.username
         }
+

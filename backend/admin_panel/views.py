@@ -12,6 +12,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
 from contacts.models import ContactSubmission
+from django.http import JsonResponse
 
 @csrf_protect
 def admin_login(request):
@@ -99,6 +100,7 @@ def product_add(request):
     
     # Pass category choices to the template
     categories = [{'id': choice[0], 'name': choice[1]} for choice in Product.CATEGORY_CHOICES]
+    return render(request, 'admin_panel/product_form.html', {'categories': categories, 'action': 'Add'})
 
 @login_required
 def reviews_list(request):
@@ -292,6 +294,87 @@ def product_delete(request, product_id):
     return render(request, 'admin_panel/product_confirm_delete.html', {'product': product})
 
 @login_required
+def user_list(request):
+    if not request.user.is_staff:
+        return redirect('admin_login')
+    
+    search_query = request.GET.get('search', '')
+    role_filter = request.GET.get('role', '')
+    status_filter = request.GET.get('status', '')
+    
+    users = CustomUser.objects.all().order_by('-date_joined')
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    if role_filter:
+        users = users.filter(is_staff=role_filter == 'admin')
+    
+    if status_filter:
+        users = users.filter(is_active=status_filter == 'active')
+    
+    return render(request, 'admin_panel/user_list.html', {
+        'users': users,
+        'search_query': search_query,
+        'role_filter': role_filter,
+        'status_filter': status_filter
+    })
+
+@login_required
+def user_edit(request, user_id):
+    if not request.user.is_staff:
+        return redirect('admin_login')
+    
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == 'POST':
+        user.username = request.POST.get('username')
+        user.email = request.POST.get('email')
+        user.is_staff = request.POST.get('is_staff') == 'on'
+        user.is_active = request.POST.get('is_active') == 'on'
+        
+        # Only allow password change if provided
+        if request.POST.get('password'):
+            user.set_password(request.POST.get('password'))
+        
+        user.save()
+        messages.success(request, 'User updated successfully!')
+        return redirect('admin_users')
+    
+    return render(request, 'admin_panel/user_form.html', {'user': user})
+
+@login_required
+def user_delete(request, user_id):
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+    
+    try:
+        user = get_object_or_404(CustomUser, id=user_id)
+        user.delete()
+        return JsonResponse({'success': True, 'message': 'User deleted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+def toggle_user_status(request, user_id):
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    try:
+        user = get_object_or_404(CustomUser, id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        return JsonResponse({'success': True, 'is_active': user.is_active})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 def order_list(request):
     if not request.user.is_staff:
         return redirect('admin_login')

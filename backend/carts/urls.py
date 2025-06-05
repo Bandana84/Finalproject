@@ -9,8 +9,10 @@ from .views import (
     AddressView,
     OrderView,
     MyOrdersView,
-    CancelOrderView
-)
+    CancelOrderView,
+    init_khalti_payment,
+    verify_khalti_payment,
+    )
 
 urlpatterns = [
     path('', CartView.as_view(), name='get-cart'),
@@ -21,4 +23,6 @@ urlpatterns = [
     path('order/', OrderView.as_view(), name='order'),
     path('my-orders/', MyOrdersView.as_view(), name='my-orders'),
     path('cancel-order/<int:order_id>/', CancelOrderView.as_view(), name='cancel-order'),
+    path('khalti/initiate/', init_khalti_payment, name='init-khalti'),
+    path('khalti/verify/', verify_khalti_payment, name='verify-khalti'),
 ]

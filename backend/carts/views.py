@@ -114,11 +114,11 @@ class OrderView(APIView):
             payment_method = request.data.get('payment_method')
             payment_details = request.data.get('payment_details')
 
-            # Log the incoming data
-            print("Received data:", request.data)
-            print("Address data:", address_data)
-            print("Payment method:", payment_method)
-            print("Payment details:", payment_details)
+            # # Log the incoming data
+            # print("Received data:", request.data)
+            # print("Address data:", address_data)
+            # print("Payment method:", payment_method)
+            # print("Payment details:", payment_details)
 
             # Validate required fields
             required_fields = ['street', 'city', 'province', 'country', 'phone', 'payment_method']
@@ -163,7 +163,7 @@ class OrderView(APIView):
                     payment_details=payment_details,
                     total_amount=cart.grand_total
                 )
-                print("Order created:", order.id)
+                # print("Order created:", order.id)
 
                 # Create order items from cart items
                 for cart_item in cart.items.all():
@@ -173,11 +173,11 @@ class OrderView(APIView):
                         quantity=cart_item.quantity,
                         price=cart_item.product.offer_price
                     )
-                print("Order items created")
+                # print("Order items created")
 
                 # Clear the cart after successful order creation
                 cart.items.all().delete()
-                print("Cart cleared")
+                # print("Cart cleared")
 
                 return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
             except Exception as e:
@@ -255,3 +255,145 @@ class CancelOrderView(APIView):
                 {'error': str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+import requests
+import json
+from django.conf import settings
+from .models import Order  # Ensure this import is correct
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def init_khalti_payment(request):
+    """
+    Initialize Khalti payment and return payment URL
+    """
+    try:
+        # Get data from request
+        return_url = request.data.get('return_url')
+        amount = request.data.get('amount')  # In paisa (1 NPR = 100 paisa)
+        purchase_order_id = request.data.get('purchase_order_id')
+        customer_info = request.data.get('customer_info', {})
+        
+        # Validate required fields
+        if not all([return_url, amount, purchase_order_id]):
+            return Response({"error": "Missing required fields: return_url, amount, purchase_order_id"}, status=400)
+        
+        # Prepare payload for Khalti
+        payload = {
+            "return_url": return_url,
+            "website_url": settings.FRONTEND_URL,
+            "amount": amount,
+            "purchase_order_id": purchase_order_id,
+            "purchase_order_name": "E-commerce Order",
+            "customer_info": {
+                "name": customer_info.get('name', request.user.get_full_name()),
+                "email": customer_info.get('email', request.user.email),
+                "phone": customer_info.get('phone', '')
+            }
+        }
+        
+        # Khalti API headers
+        headers = {
+            'Authorization': f'Key {settings.KHALTI_SECRET_KEY}',
+            'Content-Type': 'application/json',
+        }
+        
+        # Make request to Khalti
+        response = requests.post(
+            'https://a.khalti.com/api/v2/epayment/initiate/',
+            headers=headers,
+            data=json.dumps(payload)
+        )
+        
+        response.raise_for_status()
+        res_data = response.json()
+        
+        if 'payment_url' in res_data:
+            return Response({
+                "payment_url": res_data['payment_url'],
+                "pidx": res_data.get('pidx')
+            }, status=200)
+        else:
+            return Response({"error": "Failed to initiate payment", "details": res_data}, status=400)
+            
+    except requests.exceptions.RequestException as e:
+        return Response({
+            "error": "Payment initiation failed",
+            "details": str(e)
+        }, status=500)
+    except Exception as e:
+        return Response({
+            "error": "An unexpected error occurred",
+            "details": str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_khalti_payment(request):
+    """
+    Verify Khalti payment using pidx
+    """
+    try:
+        pidx = request.data.get('pidx') or request.query_params.get('pidx')
+        if not pidx:
+            return Response({"error": "Missing pidx parameter"}, status=400)
+        
+        # Khalti API headers
+        headers = {
+            'Authorization': f'Key {settings.KHALTI_SECRET_KEY}',
+            'Content-Type': 'application/json',
+        }
+        
+        # Verify payment with Khalti
+        response = requests.post(
+            'https://a.khalti.com/api/v2/epayment/lookup/',
+            headers=headers,
+            data=json.dumps({'pidx': pidx})
+        )
+        
+        response.raise_for_status()
+        res_data = response.json()
+        
+        if res_data.get('status') == 'Completed':
+            # Find and update the order
+            try:
+                order = Order.objects.get(
+                    payment_data__pidx=pidx,
+                    user=request.user,
+                    status='pending'
+                )
+                order.status = 'completed'
+                order.payment_data = res_data
+                order.save()
+                
+                return Response({
+                    "success": True,
+                    "message": "Payment verified successfully",
+                    "order_id": order.order_id,
+                    "amount": order.amount,
+                    "status": order.status
+                }, status=200)
+            except Order.DoesNotExist:
+                return Response({
+                    "error": "Order not found for this payment",
+                    "details": res_data
+                }, status=404)
+        else:
+            return Response({
+                "error": "Payment not completed",
+                "details": res_data
+            }, status=400)
+            
+    except requests.exceptions.RequestException as e:
+        return Response({
+            "error": "Payment verification failed",
+            "details": str(e)
+        }, status=500)
+    except Exception as e:
+        return Response({
+            "error": "An unexpected error occurred",
+            "details": str(e)
+        }, status=500)

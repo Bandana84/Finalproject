@@ -1,4 +1,5 @@
 {% extends "admin_panel/base.html" %}
+{% load custom_filters %}
 
 {% block title %}Orders - Farm Market Admin{% endblock %}
 
@@ -50,7 +51,7 @@
                     {% for order in orders %}
                     <tr class="hover:bg-gray-50 transition-colors duration-200" data-order-id="{{ order.id }}">
                         <td class="px-6 py-4">
-                            <div class="font-medium text-gray-900">#{{ order.id }}</div>
+                            <div class="font-medium text-gray-900">#${{ order.id }}</div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
@@ -68,7 +69,20 @@
                             <div class="text-xs text-gray-500">{{ order.created_at|date:"h:i A" }}</div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="font-medium text-gray-900">${{ order.total_amount }}</div>
+                            {% with items=order.items.all %}
+                            {% with in_stock_items=items|filter_in_stock %}
+                            {% with total_amount=in_stock_items|calculate_total %}
+                            <div class="font-medium text-gray-900">${{ total_amount }}</div>
+                            {% endwith %}
+                            {% with in_stock_count=in_stock_items|length %}
+                            {% with total_count=items|length %}
+                            {% if total_count > in_stock_count %}
+                            <div class="text-xs text-gray-500">{{ total_count|subtract:in_stock_count }} item(s) out of stock</div>
+                            {% endif %}
+                            {% endwith %}
+                            {% endwith %}
+                            {% endwith %}
+                            {% endwith %}
                         </td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 text-sm rounded-full

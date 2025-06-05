@@ -82,8 +82,31 @@
     flex: 1;
 }
 
+.product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stock-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.in-stock {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.out-of-stock {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
 .item-details h3 {
-    margin: 0 0 10px 0;
+    margin: 0 0 5px 0;
     font-size: 1.2rem;
     color: #333;
     cursor: pointer;

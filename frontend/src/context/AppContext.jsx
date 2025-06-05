@@ -99,12 +99,14 @@ export const AppContextProvider = ({ children }) => {
 
             const data = await response.json();
             if (data && data.items) {
-                // Map: productId -> { quantity, cart_item_id }
+                // Map: productId (string) -> { quantity, cart_item_id }
                 const items = {};
                 data.items.forEach(item => {
-                    items[item.product.id] = {
+                    const productId = String(item.product.id);
+                    items[productId] = {
                         quantity: item.quantity,
-                        cart_item_id: item.id // backend's cart item id
+                        cart_item_id: item.id,
+                        product: item.product
                     };
                 });
                 setCartItems(items);
@@ -210,13 +212,11 @@ export const AppContextProvider = ({ children }) => {
             const response = await fetch(`http://localhost:8000/api/carts/remove-by-product/${productId}/`, {
                 method: 'DELETE',
                 headers: {
-                  
                     Authorization: `Bearer ${accessToken}`,
                 },
             });
 
             if (response.ok) {
-              
                 fetchCart();
                 return true;
             } else {
@@ -229,22 +229,24 @@ export const AppContextProvider = ({ children }) => {
         }
     };
 
+    // Get cart count (total number of items)
     const getCartCount = () => {
         return Object.values(cartItems).reduce((sum, item) => sum + (item.quantity || 0), 0);
     };
 
+    // Get cart amount (total price) excluding out-of-stock items
     const getCartAmount = () => {
         let total = 0;
         for (const id in cartItems) {
             const product = products.find(p => String(p.id) === String(id));
-            if (product) {
+            if (product && product.inStock) {
                 total += product.offer_price * cartItems[id].quantity;
             }
         }
         return Math.round(total * 100) / 100;
     };
 
-    // Update getCart to ensure each item has a top-level id (product id)
+    // Get cart items array (including out-of-stock items)
     const getCart = () => {
         const cartArray = [];
         for (const key in cartItems) {
@@ -252,7 +254,7 @@ export const AppContextProvider = ({ children }) => {
             if (product) {
                 cartArray.push({ 
                     ...product, 
-                    id: product.id, // ensure id is present and is the product id
+                    id: product.id, 
                     quantity: cartItems[key].quantity, 
                     cart_item_id: cartItems[key].cart_item_id
                 });
@@ -261,7 +263,7 @@ export const AppContextProvider = ({ children }) => {
         return cartArray;
     };
 
-    // Add cart object
+    // Add cart object with filtered items
     const cart = {
         items: getCart(),
         subtotal: getCartAmount(),
@@ -269,10 +271,6 @@ export const AppContextProvider = ({ children }) => {
         grand_total: Math.round(getCartAmount() * 1.02 * 100) / 100,
         itemCount: getCartCount()
     };
-
-    useEffect(() => {
-        fetchProducts();
-    }, []);
 
     useEffect(() => {
         fetchCart();

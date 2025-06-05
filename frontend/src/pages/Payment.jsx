@@ -1,152 +1,125 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAppContext } from "../context/AppContext";
+import Swal from "sweetalert2";
+import api from "../utils/axios";
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currency } = useAppContext();
-  const { address, paymentMethod, totalAmount } = location.state || {};
+  const { currency, cart } = useAppContext();
+  const { address, paymentMethod, totalAmount, cartItems } = location.state || {};
   const [loading, setLoading] = useState(false);
-  const [checkout, setCheckout] = useState(null);
 
-  // Load Khalti Checkout script
-  useEffect(() => {
-    if (!window.KhaltiCheckout) {
-      const script = document.createElement('script');
-      script.src = "https://khalti.s3.ap-south-1.amazonaws.com/KPG/dist/2020.12.17.0.0.0/khalti-checkout.iffe.js";
-      script.onload = () => {
-        initializeKhaltiCheckout();
-      };
-      document.body.appendChild(script);
-    } else {
-      initializeKhaltiCheckout();
-    }
-
-    return () => {
-      if (checkout) {
-        checkout.hide();
-      }
-    };
-  }, []);
-
-  // Initialize Khalti Checkout
-  const initializeKhaltiCheckout = () => {
-    const config = {
-      // Sandbox credentials (replace with your test keys)
-      publicKey: "test_public_key_d1790b84c696446db29feb56628ec289",
-      productIdentity: `order_${Date.now()}`,
-      productName: "Your Store Purchase",
-      productUrl: window.location.href,
-      paymentPreference: ["KHALTI"],
-      eventHandler: {
-        onSuccess: (payload) => {
-          handlePaymentSuccess(payload);
-        },
-        onError: (error) => {
-          toast.error(`Payment failed: ${error.message}`);
-          console.error("Khalti Error:", error);
-        },
-        onClose: () => {
-          toast("Payment window closed");
-        }
-      }
-    };
-
-    setCheckout(new window.KhaltiCheckout(config));
-  };
-
-  // Handle successful payment
-  const handlePaymentSuccess = async (payload) => {
+  const handlePaymentSubmission = async () => {
     setLoading(true);
-    try {
-      const response = await fetch('http://localhost:8000/api/payments/khalti/verify/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token: payload.token,
-          amount: payload.amount,
-          mobile: payload.mobile,
-          product_details: {
-            name: "Your Product",
-            quantity: 1
-          }
-        }),
-      });
+    console.log("location.state:", location.state);
+    console.log("cartItems:", cartItems);
+    console.log("AppContext cart:", cart);
 
-      if (!response.ok) {
-        throw new Error('Payment verification failed');
+    try {
+      const tokens = JSON.parse(localStorage.getItem("tokens") || "{}");
+      const token = tokens?.access;
+
+      console.log("Auth token:", token);
+
+      if (!token) {
+        throw new Error("Please log in to continue");
       }
 
-      const data = await response.json();
-      toast.success("Payment successful! Order placed.");
-      navigate('/order-success', { state: data });
+      if (!totalAmount || !address) {
+        throw new Error("Missing order details (total amount or address)");
+      }
+
+      if (!cartItems || !Array.isArray(cartItems) || !cartItems.length) {
+        throw new Error("Cart is empty or invalid. Please add items to your cart.");
+      }
+
+      // Validate cart items structure
+      if (!cartItems.every(item => item?.product && item?.quantity)) {
+        throw new Error("Invalid cart item structure");
+      }
+
+      if (!address?.street || !address?.city || !address?.province || !address?.country) {
+        throw new Error("Please complete all address fields");
+      }
+
+      const clientOrderId = `ORDER_${Date.now()}`;
+
+      // Build the order payload (same as before)
+      const orderPayload = {
+        street: address.street,
+        city: address.city,
+        province: address.province,
+        country: address.country,
+        phone: address.phone || "",
+        payment_method: "khalti",
+        payment_details: {},
+        items: cartItems.map(item => ({
+          product: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price
+        })),
+        total_amount: totalAmount
+      };
+
+      // Only initiate Khalti payment, do not create order here
+      const khaltiPayload = {
+        return_url: `${window.location.origin}/khalti-verify?order_id=${clientOrderId}`,
+        amount: Math.round(totalAmount * 100),
+        purchase_order_id: clientOrderId,
+        customer_info: {
+          name: address.name || address.street,
+          email: address.email || "user@example.com",
+          phone: address.phone || "9813479433"
+        },
+        // No order_id yet, will be created after payment verification
+      };
+
+      console.log("Khalti payload:", khaltiPayload);
+
+      const response = await api.post("/carts/khalti/initiate/", khaltiPayload);
+
+      console.log("Khalti response:", response.data);
+      if (response.data.payment_url) {
+        localStorage.setItem(
+          "khalti_order_ref",
+          JSON.stringify({
+            pidx: response.data.pidx,
+            orderPayload // <-- Save orderPayload for KhaltiVerify
+          })
+        );
+        window.location.href = response.data.payment_url;
+      } else {
+        throw new Error("Failed to get payment URL");
+      }
     } catch (error) {
-      toast.error(`Order processing failed: ${error.message}`);
-    } finally {
+      console.error("Payment error:", error, "Response:", error.response?.data);
+      let errorMessage = error.response?.data?.error || error.message || "An error occurred";
+      if (error.response?.status === 400 && error.response?.data?.error?.includes("Cart")) {
+        errorMessage = "Your cart is empty on the server. Please add items again.";
+      }
+      Swal.fire({
+        title: "Payment Failed",
+        text: errorMessage,
+        icon: "error"
+      }).then(() => {
+        if (error.message.includes("log in") || error.response?.status === 401) {
+          navigate("/login");
+        } else if (error.message.includes("cart") || error.response?.data?.error?.includes("Cart")) {
+          navigate("/cart");
+        }
+      });
       setLoading(false);
     }
   };
 
-  // Initiate payment
-  // Payment.jsx
-const handleManualRetry = () => {
-  if (!window.KhaltiCheckout) {
-    toast.error("Payment system not ready. Please refresh.");
-    return;
-  }
-
-  const config = {
-    // SANDBOX TEST KEY (replace with live in production)
-    publicKey: "test_public_key_d1790b84c696446db29feb56628ec289",
-    productIdentity: `order_${Date.now()}`,
-    productName: "Your Product",
-    productUrl: window.location.href,
-    paymentPreference: ["KHALTI"],
-    eventHandler: {
-      onSuccess: async (payload) => {
-        try {
-          const response = await fetch('/api/payments/khalti/verify/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-              token: payload.token,
-              amount: payload.amount,
-              mobile: payload.mobile
-            })
-          });
-          
-          if (!response.ok) throw new Error(await response.text());
-          navigate('/order-success');
-        } catch (error) {
-          toast.error(`Verification failed: ${error.message}`);
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Payment failed");
-        console.error("Khalti Error:", error);
-      }
-    }
-  };
-
-  const checkout = new window.KhaltiCheckout(config);
-  checkout.show({
-    amount: Math.round(totalAmount * 100) // Convert to paisa
-  });
-};
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-800">Processing Payment</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Processing Order</h2>
           <p className="text-gray-600 mt-2">Please wait...</p>
         </div>
       </div>
@@ -158,10 +131,9 @@ const handleManualRetry = () => {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-indigo-600 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white">Complete Your Payment</h2>
-            <p className="mt-1 text-indigo-100">Secure payment page</p>
+            <h2 className="text-2xl font-bold text-white">Complete Your Order</h2>
+            <p className="mt-1 text-indigo-100">Review your details</p>
           </div>
-
           <div className="p-6">
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -174,12 +146,12 @@ const handleManualRetry = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Total Amount</span>
                   <span className="text-2xl font-bold text-indigo-600">
-                    {currency}{totalAmount}
+                    {currency}
+                    {totalAmount}
                   </span>
                 </div>
               </div>
             </div>
-
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,12 +162,15 @@ const handleManualRetry = () => {
               </h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p><span className="font-medium">Address:</span> {address?.street}, {address?.city}, {address?.province}, {address?.country}</p>
-                  <p><span className="font-medium">Phone:</span> {address?.phone || 'Not provided'}</p>
+                  <p>
+                    <span className="font-medium">Address:</span> {address?.street}, {address?.city}, {address?.province}, {address?.country}
+                  </p>
+                  <p>
+                    <span className="font-medium">Phone:</span> {address?.phone || "Not provided"}
+                  </p>
                 </div>
               </div>
             </div>
-
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -204,18 +179,18 @@ const handleManualRetry = () => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">Payment Instructions</h3>
+                  <h3 className="text-sm font-medium text-blue-800">Payment Method</h3>
                   <div className="mt-2 text-sm text-blue-700">
-                    <p>This is a placeholder for payment instructions.</p>
-                    <p className="mt-1">You can integrate your payment gateway here.</p>
+                    <p>Selected: {paymentMethod === "online" ? "Khalti" : "Cash on Delivery"}</p>
+                    {paymentMethod === "online" && <p className="mt-1">You'll be redirected to Khalti for payment.</p>}
+                    {paymentMethod === "cod" && <p className="mt-1">You'll pay when your order arrives.</p>}
                   </div>
                 </div>
               </div>
             </div>
-
             <div className="flex justify-between items-center">
               <button
-                onClick={() => navigate('/checkout')}
+                onClick={() => navigate("/checkout")}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,13 +199,11 @@ const handleManualRetry = () => {
                 Back to Checkout
               </button>
               <button
-                onClick={handleManualRetry}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                onClick={handlePaymentSubmission}
+                disabled={loading}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Retry Payment
+                {loading ? "Processing..." : "Confirm Order"}
               </button>
             </div>
           </div>

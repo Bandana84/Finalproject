@@ -134,12 +134,12 @@ const MyOrders = () => {
                       <h4 className="text-sm font-medium text-gray-900 mb-3">Order Summary</h4>
                       <div className="space-y-2 text-sm text-gray-600">
                         <p>
-                          <span className="font-medium">Total Items:</span> {order.items_count}
+                          <span className="font-medium">Total Items:</span> {order?.items?.filter((item) => item?.product?.inStock === true)?.length || 0}
                         </p>
                         <p>
                           <span className="font-medium">Total Amount:</span>{' '}
                           <span className="text-lg font-semibold text-gray-900">
-                            {currency}{order.total_amount}
+                            {currency}{order?.total_amount || 0}
                           </span>
                         </p>
                       </div>
@@ -151,19 +151,19 @@ const MyOrders = () => {
                 <div className="px-6 py-4 bg-gray-50">
                   <h4 className="text-sm font-medium text-gray-900 mb-4">Order Items</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {order.items.map((item) => (
+                    {order.items?.filter((item) => item?.product?.inStock === true)?.map((item) => (
                       <div
                         key={item.product.id}
                         className="flex items-center space-x-4 p-3 bg-white rounded-lg border border-gray-200"
                       >
                         <img
-                          src={item.product.images?.[0] ? getImageUrl(item.product.images[0]) : '/placeholder.png'}
-                          alt={item.product.name}
+                          src={item.product?.images?.[0] ? getImageUrl(item.product.images[0]) : '/placeholder.png'}
+                          alt={item.product?.name || 'Product'}
                           className="w-20 h-20 object-cover rounded-md"
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.product.name}
+                            {item.product?.name || 'Product'}
                           </p>
                           <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                           <p className="text-sm text-gray-500">
@@ -171,7 +171,7 @@ const MyOrders = () => {
                           </p>
                         </div>
                       </div>
-                    ))}
+                    )) || null}
                   </div>
                 </div>
               </div>

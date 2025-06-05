@@ -1,4 +1,5 @@
 {% extends "admin_panel/base.html" %}
+{% load custom_filters %}
 
 {% block title %}Order #{{ order.id }} - Farm Market Admin{% endblock %}
 
@@ -107,8 +108,12 @@
             </div>
             <div class="p-6 space-y-4">
                 <div class="flex justify-between">
+                    <span class="text-gray-600">Payment Method</span>
+                    <span class="font-medium">{{ order.payment_method }}</span>
+                </div>
+                <div class="flex justify-between">
                     <span class="text-gray-600">Subtotal</span>
-                    <span class="font-medium">${{ order.total_amount }}</span>
+                    <span class="font-medium">${{ order.items.all|filter_in_stock|calculate_total }}</span>
                 </div>
                 {% if order.shipping_cost %}
                 <div class="flex justify-between">
@@ -120,7 +125,7 @@
                     <div class="flex justify-between">
                         <span class="text-lg font-semibold text-gray-900">Total</span>
                         <span class="text-lg font-bold text-primary-600">
-                            ${{ order.total_amount }}
+                            ${{ order.items.all|filter_in_stock|calculate_total }}
                             {% if order.shipping_cost %}
                             + ${{ order.shipping_cost }}
                             {% endif %}
@@ -149,6 +154,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         {% for item in order.items.all %}
+                        {% if item.product.in_stock %}
                         <tr class="text-sm hover:bg-gray-50 transition-colors duration-200">
                             <td class="py-4">
                                 <div class="flex items-center space-x-3">
@@ -171,6 +177,7 @@
                             <td class="py-4">{{ item.quantity }}</td>
                             <td class="py-4 text-right font-medium">${{ item.total_price }}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

@@ -1,75 +1,147 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import api from '../utils/axios';
 import toast from 'react-hot-toast';
+import api from '../utils/axios';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { cart, currency, fetchCart } = useAppContext();
+  const { cart, currency, products } = useAppContext();
   const [address, setAddress] = useState({
     street: '',
     city: '',
     province: '',
     country: '',
-    phone: ''
+    phone: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setAddress(prev => ({
+    setAddress((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handlePlaceOrder = async () => {
     try {
       setIsProcessing(true);
-      
+
       // Validate required fields
       const requiredFields = ['street', 'city', 'province', 'country', 'phone'];
-      const missingFields = requiredFields.filter(field => !address[field]);
-      
+      const missingFields = requiredFields.filter((field) => !address[field]);
       if (missingFields.length > 0) {
         toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
-        setIsProcessing(false);
-      return;
-    }
+        return;
+      }
 
-      if (paymentMethod === 'online') {
-        // Redirect to Khalti payment page
-        navigate('/payment', { 
-          state: { 
-            address,
-            paymentMethod,
-            totalAmount: cart.grand_total
-          }
-        });
-      return;
-    }
+      // Validate cart and products
+      console.log('Cart:', cart);
+      console.log('Products:', products);
+      if (!cart || !Object.keys(cart.items).length) {
+        toast.error('Your cart is empty. Please add items to proceed.');
+        navigate('/cart');
+        return;
+      }
 
-      const response = await api.post('/carts/order/', {
-        ...address,
-        payment_method: paymentMethod
+      // Check if we have products data
+      if (!products || !products.length) {
+        toast.error('Failed to load product data. Please try refreshing the page.');
+        return;
+      }
+
+      // First filter out out-of-stock items
+      const inStockItems = Object.entries(cart.items).filter(([productId, item]) => {
+        const product = item.product || products.find(p => String(p.id) === productId);
+        return product && product.inStock;
       });
 
-      if (response.status === 201) {
-        toast.success('Order placed successfully!');
-        fetchCart();
-        navigate('/my-orders');
+      // If no in-stock items, show error
+      if (inStockItems.length === 0) {
+        toast.error('All items in your cart are out of stock. Please remove them and try again.');
+        navigate('/cart');
+        return;
+      }
+
+      // Validate cart items and ensure valid product data
+      const cartItemsWithProducts = inStockItems.map(([productId, item]) => {
+        console.log('Processing cart item:', { productId, item });
+        // Check if product data is already included
+        if (item.product && item.product.id) {
+          console.log('Using included product data:', item.product);
+          return {
+            product: item.product,
+            quantity: item.quantity,
+            price: item.product.price
+          };
+        }
+
+        // Fallback to finding product in products array if not included
+        // Use string comparison since we're storing product IDs as strings
+        const product = products.find(p => String(p.id) === productId);
+        if (!product) {
+          console.log('Product not found in array for ID:', productId);
+          throw new Error(`Product not found for ID: ${productId}`);
+        }
+        
+        return {
+          product,
+          quantity: item.quantity,
+          price: product.price
+        };
+      });
+
+      if (paymentMethod === 'cod') {
+        const orderPayload = {
+          street: address.street,
+          city: address.city,
+          province: address.province,
+          country: address.country,
+          phone: address.phone || "",
+          payment_method: "cod",
+          payment_details: {},
+          items: cartItemsWithProducts.map(item => ({
+            product: item.product.id,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          total_amount: cart.grand_total
+        };
+
+        try {
+          const response = await api.post("/carts/order/", orderPayload);
+          if (response.data.id) {
+            toast.success("Order placed successfully!");
+            navigate("/my-orders");
+          } else {
+            throw new Error("Failed to create order");
+          }
+        } catch (error) {
+          console.error("Order error:", error);
+          toast.error(error.response?.data?.error || "Failed to place order");
+        }
+      } else {
+        // For Khalti, just navigate to payment page
+        navigate('/payment', {
+          state: {
+            address,
+            paymentMethod,
+            totalAmount: cart.grand_total,
+            cartItems: cartItemsWithProducts,
+          },
+        });
       }
     } catch (err) {
-      console.error('Order error:', err);
-      toast.error(err.response?.data?.error || 'Failed to place order');
+      console.error('Checkout error:', err);
+      toast.error('Failed to proceed to payment');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (!cart || cart.items.length === 0) {
+  if (!cart || !cart.items || !Object.keys(cart.items).length) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,13 +159,15 @@ const Checkout = () => {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h2>
-          
+
           {/* Address Form */}
           <div className="mb-8">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Shipping Information</h3>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label htmlFor="street" className="block text-sm font-medium text-gray-700">Street Address</label>
+                <label htmlFor="street" className="block text-sm font-medium text-gray-700">
+                  Street Address
+                </label>
                 <input
                   type="text"
                   id="street"
@@ -106,7 +180,9 @@ const Checkout = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">City</label>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                    City
+                  </label>
                   <input
                     type="text"
                     id="city"
@@ -118,7 +194,9 @@ const Checkout = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="province" className="block text-sm font-medium text-gray-700">Province</label>
+                  <label htmlFor="province" className="block text-sm font-medium text-gray-700">
+                    Province
+                  </label>
                   <input
                     type="text"
                     id="province"
@@ -131,9 +209,11 @@ const Checkout = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-        <div>
-                  <label htmlFor="country" className="block text-sm font-medium text-gray-700">Country</label>
-            <input
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+                    Country
+                  </label>
+                  <input
                     type="text"
                     id="country"
                     name="country"
@@ -142,9 +222,11 @@ const Checkout = () => {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
-        </div>
-        <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Phone Number
+                  </label>
                   <input
                     type="tel"
                     id="phone"
@@ -200,15 +282,24 @@ const Checkout = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="text-gray-900">{currency}{cart.subtotal}</span>
-          </div>
-          <div className="flex justify-between">
+                <span className="text-gray-900">
+                  {currency}
+                  {cart.subtotal}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">Tax (13%)</span>
-                <span className="text-gray-900">{currency}{cart.tax}</span>
+                <span className="text-gray-900">
+                  {currency}
+                  {cart.tax}
+                </span>
               </div>
               <div className="flex justify-between text-lg font-medium">
                 <span className="text-gray-900">Total</span>
-                <span className="text-gray-900">{currency}{cart.grand_total}</span>
+                <span className="text-gray-900">
+                  {currency}
+                  {cart.grand_total}
+                </span>
               </div>
             </div>
           </div>
@@ -220,7 +311,7 @@ const Checkout = () => {
               disabled={isProcessing}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? 'Processing...' : 'Place Order'}
+              {isProcessing ? 'Processing...' : 'Proceed to Payment'}
             </button>
           </div>
         </div>

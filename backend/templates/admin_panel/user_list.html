@@ -84,9 +84,12 @@
                                 <a href="{% url 'admin_user_edit' user.id %}" class="text-primary-600 hover:text-primary-700">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="{% url 'admin_user_delete' user.id %}" class="text-red-600 hover:text-red-700">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                                <form method="POST" action="{% url 'admin_user_delete' user.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-red-600 hover:text-red-700" onclick="return confirm('Are you sure you want to delete this user?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                                 <button onclick="toggleUserStatus({{ user.id }})" class="{% if user.is_active %}text-green-600 hover:text-green-700{% else %}text-red-600 hover:text-red-700{% endif %}">
                                     <i class="fas {% if user.is_active %}fa-user-check{% else %}fa-user-slash{% endif %}"></i>
                                 </button>

@@ -64,17 +64,32 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_subtotal(self, obj):
         return obj.get_subtotal()
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if not instance.product.in_stock:
+            return None
+        return representation
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     address = AddressSerializer(read_only=True)
     items_count = serializers.SerializerMethodField()
+    total_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = ['id', 'user', 'address', 'payment_method', 'total_amount', 'status', 'created_at', 'items', 'items_count']
 
     def get_items_count(self, obj):
-        return obj.items_count
+        return obj.items.filter(product__in_stock=True).count()
+
+    def get_total_amount(self, obj):
+        """Calculate total amount for in-stock items only"""
+        total = 0
+        for item in obj.items.all():
+            if item.product.in_stock:
+                total += item.quantity * item.price
+        return total
 
 class MyOrdersView(APIView):
     permission_classes = [IsAuthenticated]
